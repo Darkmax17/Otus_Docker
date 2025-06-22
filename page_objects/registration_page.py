@@ -23,7 +23,6 @@ class RegistrationPage(BasePage):
         ]
         return self.is_elements_list_present(checking_elements)
 
-
     @allure.step("Зарегистрировать нового пользователя")
     def registration_add_user(self, first_name, last_name, email, password):
         self.wait_title("Register Account")
