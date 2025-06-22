@@ -47,3 +47,4 @@ def test_registration_elements(browser, url):
     registration_page = RegistrationPage(browser, url=registration_url)
     registration_page.open_page()
     assert registration_page.registration_elements()
+
