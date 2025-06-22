@@ -3,7 +3,6 @@ networks:
     name: selenoid
     external: true
 
-
 services:
 
   phpadmin:
