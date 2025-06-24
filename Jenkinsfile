@@ -35,3 +35,4 @@ pipeline {
                 sh '''
                     pytest tests/ \
                         --alluredir=${ALLURE_RESULTS} \
+
