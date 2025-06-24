@@ -2,37 +2,44 @@ pipeline {
     agent any
 
     parameters {
-        string(name: 'OPENCART_URL', defaultValue: 'http://localhost', description: 'Адрес OpenCart')
-        string(name: 'SELENOID_URL', defaultValue: 'http://localhost:4444/wd/hub', description: 'Адрес Selenium/Selenoid')
-        choice(name: 'BROWSER', choices: ['chrome', 'firefox'], description: 'Браузер')
-        string(name: 'BROWSER_VERSION', defaultValue: '100.0', description: 'Версия браузера')
-        string(name: 'THREADS', defaultValue: '2', description: 'Количество потоков')
-    }
-
-    environment {
-        ALLURE_RESULTS = 'allure-results'
-        ALLURE_REPORT = 'allure-report'
+        string(name: 'EXECUTOR', defaultValue: '192.168.100.9', description: 'Selenoid host')
+        string(name: 'APP_HOST', defaultValue: 'http://opencart', description: 'Opencart URL')
+        string(name: 'BROWSER', defaultValue: 'chrome', description: 'Browser name')
+        string(name: 'BVERSION', defaultValue: '121.0', description: 'Browser version')
+        string(name: 'THREADS', defaultValue: '2', description: 'Threads count')
     }
 
     stages {
         stage('Checkout') {
             steps {
-                git 'https://github.com/Darkmax17/Otus_Docker.git'
+                checkout scm
             }
         }
 
-        stage('Install dependencies') {
+        stage('Install requirements') {
             steps {
-                sh '''
-                    pip install -r requirements.txt
-                    pip install allure-pytest
-                '''
+                sh 'python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt'
             }
         }
 
         stage('Run tests') {
             steps {
-                sh '''
-                    pytest tests/ \
-                        --alluredir=${ALLURE_RESULTS} \
+                sh """
+                    source venv/bin/activate
+                    pytest -n $THREADS \
+                        --browser=$BROWSER \
+                        --bv=$BVERSION \
+                        --executor=$EXECUTOR \
+                        --url=$APP_HOST \
+                        --alluredir=allure-results
+                """
+            }
+        }
 
+        stage('Allure report') {
+            steps {
+                allure includeProperties: false, jdk: '', results: [[path: 'allure-results']]
+            }
+        }
+    }
+}
