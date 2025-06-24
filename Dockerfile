@@ -53,3 +53,19 @@ RUN chmod +x wait-for-it.sh
 # Запуск тестов
 # ENTRYPOINT ["python", "-m", "pytest"]
 CMD []
+
+FROM jenkins/jenkins:lts
+
+USER root
+
+FROM jenkins/jenkins:lts
+
+USER root
+
+# Копируем плагины в нужную директорию Jenkins
+COPY plugins /usr/share/jenkins/ref/plugins
+
+# Даем нужные права
+RUN chown -R jenkins:jenkins /usr/share/jenkins/ref/plugins
+
+USER jenkins
