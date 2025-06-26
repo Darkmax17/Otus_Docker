@@ -8,12 +8,12 @@ default_executor = "localhost"
 log_level = "DEBUG"
 
 def pytest_addoption(parser):
-    parser.addoption("--browser_name", action="store", default="chrome", help="Browser name: chrome/firefox/edge")
-    parser.addoption("--browser_version", action="store", default="100.0", help="Browser version")
+    parser.addoption("--browser", action="store", default="chrome", help="Browser: chrome/firefox/edge")
+    parser.addoption("--bv", action="store", default="100.0", help="Browser version")
     parser.addoption("--headless", action="store_true", help="Enable headless mode")
     parser.addoption("--executor", action="store", default=default_executor, help="Selenoid executor host (no port)")
     parser.addoption("--vnc", action="store_true", help="Enable VNC support")
-    parser.addoption("--app_host", action="store", default=default_url, help="URL of the OpenCart app")
+    parser.addoption("--url", action="store", default=default_url, help="URL of the OpenCart app")
     parser.addoption("--remote", action="store_true", help="Use remote Selenium (Selenoid)")
 
 
@@ -35,8 +35,8 @@ def browser(request):
     logger.info("===> Test started at %s", datetime.datetime.now())
     logger.info("===> Test name: %s", request.node.name)
 
-    browser_name = request.config.getoption("browser_name")
-    browser_version = request.config.getoption("browser_version")
+    browser_name = request.config.getoption("browser")
+    browser_version = request.config.getoption("bv")
     executor = request.config.getoption("executor")
     headless = request.config.getoption("headless")
     remote = request.config.getoption("remote")
@@ -96,5 +96,5 @@ def browser(request):
 
 
 @pytest.fixture
-def app_host(request):
-    return request.config.getoption("app_host")
+def url(request):
+    return request.config.getoption("url")
