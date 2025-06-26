@@ -1,17 +1,16 @@
-import pytest
+import os
 import datetime
 import logging
-import os
+import pytest
 from selenium import webdriver
 
 
 def pytest_addoption(parser):
-    parser.addoption("--browser", action="store", default="chrome", help="Browser name")
-    parser.addoption("--bv", action="store", default="121.0", help="Browser version")
-    parser.addoption("--executor", action="store", default="selenoid", help="Selenoid host")
-    parser.addoption("--url", action="store", default="http://localhost", help="Target app URL")
-    parser.addoption("--vnc", action="store_true", help="Enable VNC for Selenoid")
-    parser.addoption("--remote", action="store_true", help="Use remote WebDriver")
+    parser.addoption("--browser", default="chrome")
+    parser.addoption("--bv", default="121.0")
+    parser.addoption("--executor", default="selenoid")
+    parser.addoption("--url", default="http://localhost")
+    parser.addoption("--vnc", action="store_true")
 
 
 def additional_options(options):
@@ -23,7 +22,6 @@ def additional_options(options):
 
 @pytest.fixture
 def browser(request):
-    # Ensure logs directory exists
     os.makedirs("logs", exist_ok=True)
 
     logger = logging.getLogger(request.node.name)
@@ -41,44 +39,36 @@ def browser(request):
     executor = request.config.getoption("executor")
     url = request.config.getoption("url")
     vnc = request.config.getoption("vnc")
-    remote = True  # всегда используем удалённый запуск через Selenoid
 
     executor_url = f"http://{executor}:4444/wd/hub"
     logger.info("Executor URL: %s", executor_url)
 
-    options = None
     driver = None
+    options = None
 
     try:
-        if browser_name in ["chrome"]:
+        if browser_name == "chrome":
             options = webdriver.ChromeOptions()
-        elif browser_name in ["firefox"]:
+        elif browser_name == "firefox":
             options = webdriver.FirefoxOptions()
-        elif browser_name in ["edge"]:
+        elif browser_name == "edge":
             options = webdriver.EdgeOptions()
         else:
             raise ValueError(f"Unsupported browser: {browser_name}")
 
         additional_options(options)
 
-        if remote:
-            # capabilities for Selenoid
-            capabilities = {
-                "browserName": browser_name,
-                "browserVersion": browser_version,
-                "selenoid:options": {
-                    "enableVNC": vnc,
-                    "name": request.node.name
-                }
-            }
-            for key, value in capabilities["selenoid:options"].items():
-                options.set_capability(f"selenoid:options", capabilities["selenoid:options"])
-            options.set_capability("browserVersion", browser_version)
+        # Set capabilities for Selenoid
+        options.set_capability("browserVersion", browser_version)
+        options.set_capability("selenoid:options", {
+            "enableVNC": vnc,
+            "name": request.node.name
+        })
 
-            driver = webdriver.Remote(command_executor=executor_url, options=options)
-        else:
-            # fallback to local (not used in Jenkins usually)
-            driver = webdriver.Chrome(options=options)
+        driver = webdriver.Remote(
+            command_executor=executor_url,
+            options=options
+        )
 
         driver.maximize_window()
         driver.logger = logger
@@ -87,3 +77,8 @@ def browser(request):
     except Exception as e:
         logger.error("❌ Failed to initialize WebDriver: %s", e)
         raise
+
+
+@pytest.fixture
+def url(request):
+    return request.config.getoption("url")
