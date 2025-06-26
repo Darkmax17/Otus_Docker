@@ -2,6 +2,8 @@ import pytest
 import datetime
 import logging
 from selenium import webdriver
+import os
+
 
 default_url = "http://localhost"
 default_executor = "localhost"
@@ -98,3 +100,10 @@ def browser(request):
 @pytest.fixture
 def url(request):
     return request.config.getoption("url")
+
+@pytest.fixture
+def browser(request):
+    log_dir = "logs"
+    os.makedirs(log_dir, exist_ok=True)  # ✅ создать папку logs, если её нет
+    ...
+    file_handler = logging.FileHandler(f"{log_dir}/{request.node.name}.log")
