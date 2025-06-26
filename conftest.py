@@ -7,8 +7,8 @@ from selenium import webdriver
 
 def pytest_addoption(parser):
     parser.addoption("--browser", action="store", default="chrome", help="Browser name")
-    parser.addoption("--bv", action="store", default="121.0", help="Browser version")
-    parser.addoption("--executor", action="store", default="selenoid", help="Selenoid host")
+    parser.addoption("--bv", action="store", default="121.0",     help="Browser version")
+    parser.addoption("--executor", action="store", default="selenoid:4444", help="Selenoid host:port")
     parser.addoption("--url", action="store", default="http://localhost", help="Target app URL")
     parser.addoption("--vnc", action="store_true", help="Enable VNC for Selenoid")
     parser.addoption("--remote", action="store_true", help="Use remote WebDriver")
@@ -23,12 +23,12 @@ def additional_options(options):
 
 @pytest.fixture
 def browser(request):
-    # Ensure logs directory exists
+    # Создаём папку под логи, если нет
     os.makedirs("logs", exist_ok=True)
 
+    # Настраиваем логгер на каждый тест
     logger = logging.getLogger(request.node.name)
-    log_file = f"logs/{request.node.name}.log"
-    file_handler = logging.FileHandler(log_file)
+    file_handler = logging.FileHandler(f"logs/{request.node.name}.log", encoding="utf-8")
     file_handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s"))
     logger.addHandler(file_handler)
     logger.setLevel(logging.DEBUG)
@@ -36,48 +36,46 @@ def browser(request):
     logger.info("=== Test started at %s ===", datetime.datetime.now())
     logger.info("Test name: %s", request.node.name)
 
-    browser_name = request.config.getoption("browser")
+    # Считываем опции
+    browser_name    = request.config.getoption("browser")
     browser_version = request.config.getoption("bv")
-    executor = request.config.getoption("executor")
-    url = request.config.getoption("url")
-    vnc = request.config.getoption("vnc")
-    remote = True  # всегда используем удалённый запуск через Selenoid
+    executor        = request.config.getoption("executor").rstrip('/')
+    target_url      = request.config.getoption("url")
+    vnc             = request.config.getoption("vnc")
+    # Всегда через Selenoid
+    remote          = True
 
-    executor_url = f"http://{executor}:4444/wd/hub"
+    # Формируем полный URL для Remote WebDriver
+    executor_url = f"http://{executor}/wd/hub"
     logger.info("Executor URL: %s", executor_url)
 
-    options = None
-    driver = None
-
+    # Инициализация опций и драйвера
     try:
-        if browser_name in ["chrome"]:
+        # Выбор опций под конкретный браузер
+        if browser_name == "chrome":
             options = webdriver.ChromeOptions()
-        elif browser_name in ["firefox"]:
+        elif browser_name == "firefox":
             options = webdriver.FirefoxOptions()
-        elif browser_name in ["edge"]:
+        elif browser_name == "edge":
             options = webdriver.EdgeOptions()
         else:
             raise ValueError(f"Unsupported browser: {browser_name}")
 
+        # Общие опции (headless можно добавить по флагу)
         additional_options(options)
 
         if remote:
-            # capabilities for Selenoid
-            capabilities = {
-                "browserName": browser_name,
-                "browserVersion": browser_version,
-                "selenoid:options": {
-                    "enableVNC": vnc,
-                    "name": request.node.name
-                }
-            }
-            for key, value in capabilities["selenoid:options"].items():
-                options.set_capability(f"selenoid:options", capabilities["selenoid:options"])
+            # Устанавливаем capabilities для Selenoid
+            options.set_capability("browserName", browser_name)
             options.set_capability("browserVersion", browser_version)
+            options.set_capability("selenoid:options", {
+                "enableVNC": vnc,
+                "name": request.node.name
+            })
 
             driver = webdriver.Remote(command_executor=executor_url, options=options)
         else:
-            # fallback to local (not used in Jenkins usually)
+            # Локальный запуск (не используется на Jenkins)
             driver = webdriver.Chrome(options=options)
 
         driver.maximize_window()
