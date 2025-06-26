@@ -5,6 +5,7 @@ networks:
     driver: bridge
 
 services:
+  # ------ Selenoid (WebDriver Hub) ------
   selenoid:
     image: aerokube/selenoid:latest-release
     container_name: selenoid
@@ -21,6 +22,7 @@ services:
     networks:
       - selenoid_net
 
+  # ------ Selenoid UI ------
   selenoid-ui:
     image: aerokube/selenoid-ui
     container_name: selenoid-ui
@@ -29,6 +31,7 @@ services:
     networks:
       - selenoid_net
 
+  # ------ Jenkins ------
   jenkins:
     build:
       context: .
