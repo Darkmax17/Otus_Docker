@@ -25,9 +25,9 @@ services:
     volumes:
       - "./config:/etc/selenoid"
       - "/var/run/docker.sock:/var/run/docker.sock"
-    command: ["-limit", "5", "-timeout", "3m"]
     networks:
       - selenoid_net
+    command: ["-limit", "5", "-timeout", "3m"]
 
   selenoid-ui:
     image: aerokube/selenoid-ui
@@ -39,6 +39,7 @@ services:
 
 networks:
   selenoid_net:
+    driver: bridge
 
 volumes:
   jenkins_home:
