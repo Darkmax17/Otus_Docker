@@ -3,10 +3,10 @@ agent any
 
 parameters {
     string(name: 'EXECUTOR', defaultValue: 'http://selenoid:4444', description: 'Selenoid address')
-    string(name: 'APP_HOST', defaultValue: 'http://app:8080', description: 'App host')
-    string(name: 'BROWSER', defaultValue: 'chrome', description: 'Browser')
+    string(name: 'APP_HOST', defaultValue: 'http://app:8080', description: 'Opencart URL')
+    string(name: 'BROWSER', defaultValue: 'chrome', description: 'Browser name')
     string(name: 'BVERSION', defaultValue: '121.0', description: 'Browser version')
-    string(name: 'THREADS', defaultValue: '2', description: 'Threads')
+    string(name: 'THREADS', defaultValue: '2', description: 'Number of parallel threads')
 }
 
 stages {
@@ -54,4 +54,5 @@ post {
     always {
         archiveArtifacts artifacts: 'logs/**/*.log', allowEmptyArchive: true
     }
+}
 }
