@@ -1,39 +1,44 @@
+version: '3.9'
+
 services:
   jenkins:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: custom-jenkins:latest
     container_name: jenkins
-    image: jenkins/jenkins:lts
     ports:
       - "8080:8080"
       - "50000:50000"
     volumes:
       - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - selenoid_net
     restart: always
 
   selenoid:
-    container_name: selenoid
     image: aerokube/selenoid:latest-release
+    container_name: selenoid
     ports:
       - "4444:4444"
     volumes:
-      - "./browsers.json:/etc/selenoid/browsers.json"
+      - "./config:/etc/selenoid"
       - "/var/run/docker.sock:/var/run/docker.sock"
-    command: ["-limit", "5"]
+    command: ["-limit", "5", "-timeout", "3m"]
     networks:
       - selenoid_net
 
   selenoid-ui:
-    container_name: selenoid-ui
     image: aerokube/selenoid-ui
+    container_name: selenoid-ui
     ports:
       - "8081:8080"
-    command: ["--selenoid-uri", "http://selenoid:4444"]
     networks:
       - selenoid_net
 
-volumes:
-  jenkins_home:
-
 networks:
   selenoid_net:
+
+volumes:
+  jenkins_home:
