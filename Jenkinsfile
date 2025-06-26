@@ -1,6 +1,11 @@
 pipeline {
     agent any
 
+    environment {
+    PYTHONIOENCODING = 'utf-8'
+    VENV_DIR = 'venv'
+    ALLURE_DIR = 'allure-results'
+
     parameters {
         string(name: 'EXECUTOR', defaultValue: 'selenoid', description: 'Selenoid address (hostname in Docker network)')
         string(name: 'APP_HOST', defaultValue: 'http://host.docker.internal', description: 'App URL')
