@@ -5,14 +5,14 @@ pipeline {
         string(name: 'EXECUTOR', defaultValue: 'selenoid', description: 'Selenoid address (hostname in Docker network)')
         string(name: 'APP_HOST', defaultValue: 'http://host.docker.internal', description: 'App URL')
         string(name: 'BROWSER', defaultValue: 'chrome', description: 'Browser')
-        string(name: 'BVERSION', defaultValue: '121.0', description: 'Browser version')
+        string(name: 'BVERSION', defaultValue: '120.0', description: 'Browser version')
         string(name: 'THREADS', defaultValue: '2', description: 'Parallel threads')
     }
 
     stages {
         stage('Checkout') {
             steps {
-                checkout scm
+              git url: 'https://github.com/Darkmax17/Otus_Docker.git', branch: 'jenkins-support'
             }
         }
 
@@ -45,7 +45,7 @@ pipeline {
 
         stage('Allure Report') {
             steps {
-                allure includeProperties: false, jdk: '', results: [[path: 'allure-results']]
+                allure includeProperties: false, jdk: '',reportBuildPolicy: 'ALWAYS', results: [[path: 'allure-results']]
             }
         }
     }

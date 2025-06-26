@@ -1,53 +1,39 @@
-networks:
-  default:
-    name: selenoid
-    external: true
-
 services:
-
-  phpadmin:
-    image: 'phpmyadmin/phpmyadmin:latest'
-    environment:
-      - PMA_HOST=mariadb
-      - PMA_PORT=3306
-      - PMA_USER=bn_opencart
+  jenkins:
+    container_name: jenkins
+    image: jenkins/jenkins:lts
     ports:
-      - '${PHPADMIN_PORT}:80'
+      - "8080:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+    networks:
+      - selenoid_net
+    restart: always
 
-  mariadb:
-    image: docker.io/bitnami/mariadb:11.2
-    environment:
-      - ALLOW_EMPTY_PASSWORD=yes
-      - MARIADB_USER=bn_opencart
-      - MARIADB_DATABASE=bitnami_opencart
+  selenoid:
+    container_name: selenoid
+    image: aerokube/selenoid:latest-release
     ports:
-      - '3306:3306'
+      - "4444:4444"
+    volumes:
+      - "./browsers.json:/etc/selenoid/browsers.json"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    command: ["-limit", "5"]
+    networks:
+      - selenoid_net
 
-  opencart:
-    image: bitnami/opencart:4.0.2-3-debian-12-r33
+  selenoid-ui:
+    container_name: selenoid-ui
+    image: aerokube/selenoid-ui
     ports:
-      - '${OPENCART_PORT}:8080'
-      - '443:8443'
-    environment:
-      - OPENCART_HOST=${LOCAL_IP}:${OPENCART_PORT}
-      - OPENCART_DATABASE_HOST=mariadb
-      - OPENCART_DATABASE_PORT_NUMBER=3306
-      - OPENCART_DATABASE_USER=bn_opencart
-      - OPENCART_DATABASE_NAME=bitnami_opencart
-      - ALLOW_EMPTY_PASSWORD=yes
-    depends_on:
-      - mariadb
+      - "8081:8080"
+    command: ["--selenoid-uri", "http://selenoid:4444"]
+    networks:
+      - selenoid_net
 
-  tests:
-    image: opencart-tests
-    environment:
-      - OPENCART_URL=http://${LOCAL_IP}:${OPENCART_PORT}
-      - BROWSER=${BROWSER:-chrome}
-      - BROWSER_VERSION=${BROWSER_VERSION:-128.0}
-      - EXECUTOR_URL=${EXECUTOR_URL:-http://selenoid:4444/wd/hub}
-      - THREADS=${THREADS:-1}
-    command: >
-      ./wait-for-it.sh opencart 8080
-      "python -m pytest --url $$OPENCART_URL --browser $$BROWSER --bv $$BROWSER_VERSION --executor $$EXECUTOR_URL -n $$THREADS --alluredir=/app/allure-results"
-    depends_on:
-      - opencart
+volumes:
+  jenkins_home:
+
+networks:
+  selenoid_net:
