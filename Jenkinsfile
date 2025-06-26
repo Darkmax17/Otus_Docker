@@ -2,11 +2,11 @@ pipeline {
     agent any
 
     parameters {
-        string(name: 'EXECUTOR', defaultValue: '192.168.100.9', description: 'Selenoid address')
-        string(name: 'APP_HOST', defaultValue: 'http://localhost', description: 'Opencart URL')
-        string(name: 'BROWSER', defaultValue: 'chrome', description: 'Browser name')
+        string(name: 'EXECUTOR', defaultValue: 'selenoid', description: 'Selenoid address (hostname in Docker network)')
+        string(name: 'APP_HOST', defaultValue: 'http://host.docker.internal', description: 'App URL')
+        string(name: 'BROWSER', defaultValue: 'chrome', description: 'Browser')
         string(name: 'BVERSION', defaultValue: '121.0', description: 'Browser version')
-        string(name: 'THREADS', defaultValue: '2', description: 'Number of parallel threads')
+        string(name: 'THREADS', defaultValue: '2', description: 'Parallel threads')
     }
 
     stages {
@@ -31,12 +31,14 @@ pipeline {
             steps {
                 sh '''
                     . venv/bin/activate
+                    mkdir -p logs
                     pytest -n ${THREADS} \
                         --browser=${BROWSER} \
                         --bv=${BVERSION} \
                         --executor=${EXECUTOR} \
                         --url=${APP_HOST} \
-                        --alluredir=allure-results
+                        --alluredir=allure-results \
+                        -o log_cli=true -o log_cli_level=INFO
                 '''
             }
         }
