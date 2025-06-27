@@ -39,7 +39,7 @@ pipeline {
         sh '''
           echo "Запуск тестов..."
           . venv/bin/activate
-          pytest tests/opencart \
+          pytest tests \
             --app-url=$APP_URL \
             --selenoid-url=$SELENOID_URL \
             --browser=$BROWSER \
