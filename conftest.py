@@ -1,6 +1,7 @@
 import pytest
 
 def pytest_addoption(parser):
+    parser.addoption("--url", action="store", default="http://localhost", help="Base URL")
     parser.addoption("--app-url", action="store", default="http://localhost:8080")
     parser.addoption("--selenoid-url", action="store", default="http://localhost:4444/wd/hub")
     parser.addoption("--browser", action="store", default="chrome")
