@@ -36,18 +36,19 @@ pipeline {
 
 stage('Run tests') {
   steps {
-    sh '''
-      echo "✅ Активируем виртуальное окружение и запускаем тесты..."
-      . ../venv/bin/activate
-      cd Otus_Docker
-      pytest tests \
-        --app-url=$APP_URL \
-        --selenoid-url=$SELENOID_URL \
-        --browser=$BROWSER \
-        --browser-version=$BROWSER_VERSION \
-        --alluredir=allure-results \
-        -n $THREADS
-    '''
+    dir('.') {
+      sh '''
+        echo "✅ Активируем виртуальное окружение и запускаем тесты..."
+        . venv/bin/activate
+        pytest tests \
+          --app-url=$APP_URL \
+          --selenoid-url=$SELENOID_URL \
+          --browser=$BROWSER \
+          --browser-version=$BROWSER_VERSION \
+          --alluredir=allure-results \
+          -n $THREADS
+      '''
+    }
   }
 }
 
