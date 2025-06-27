@@ -47,5 +47,21 @@ services:
     networks:
       - selenoid_net
 
+  opencart:
+    image: bitnami/opencart:latest
+    container_name: opencart
+    environment:
+      - OPENCART_HOST=localhost
+      - OPENCART_USERNAME=user
+      - OPENCART_PASSWORD=bitnami123
+      - OPENCART_EMAIL=user@example.com
+      - OPENCART_FIRST_NAME=Admin
+      - OPENCART_LAST_NAME=User
+    ports:
+      - "8082:8080"
+    networks:
+      - selenoid_net
+
+
 volumes:
   jenkins_home:
