@@ -4,22 +4,27 @@ import logging
 import os
 from selenium import webdriver
 
-
 def pytest_addoption(parser):
-    parser.addoption("--browser", action="store", default="chrome", help="Browser name")
-    parser.addoption("--bv", action="store", default="121.0",     help="Browser version")
-    parser.addoption("--executor", action="store", default="selenoid:4444", help="Selenoid host:port")
-    parser.addoption("--url", action="store", default="http://localhost", help="Target app URL")
-    parser.addoption("--vnc", action="store_true", help="Enable VNC for Selenoid")
-    parser.addoption("--remote", action="store_true", help="Use remote WebDriver")
+    parser.addoption("--url", action="store", default="http://localhost:8080")
+    parser.addoption("--executor", action="store", default="http://localhost:4444/wd/hub")
+    parser.addoption("--browser", action="store", default="chrome")
+    parser.addoption("--bv", action="store", default="119.0")
+    parser.addoption("--vnc", action="store_true")
 
-
+@pytest.fixture
+def config(request):
+    return {
+        "browser": request.config.getoption("--browser"),
+        "bv": request.config.getoption("--bv"),
+        "executor": request.config.getoption("--executor"),
+        "vnc": request.config.getoption("--vnc"),
+        "url": request.config.getoption("--url")
+    }
 def additional_options(options):
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-gpu")
     options.add_argument("--window-size=1920,1080")
-
 
 @pytest.fixture
 def browser(request):
