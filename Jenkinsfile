@@ -1,5 +1,5 @@
 pipeline {
-agent any
+agent { docker { image 'python:3.10' } }
 
 parameters {
     string(name: 'EXECUTOR', defaultValue: 'http://selenoid:4444', description: 'Selenoid address')
