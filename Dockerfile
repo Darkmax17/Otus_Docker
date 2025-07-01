@@ -6,7 +6,8 @@ USER root
 
 # 1) Копируем список плагинов и ставим их
 COPY plugins.txt /usr/share/jenkins/ref/plugins.txt
-RUN /usr/local/bin/install-plugins.sh < /usr/share/jenkins/ref/plugins.txt
+# старый install-plugins.sh убран, используем новый cli
+RUN jenkins-plugin-cli --plugin-file /usr/share/jenkins/ref/plugins.txt
 
 # 2) Устанавливаем Python 3.11, venv и curl/unzip
 RUN apt-get update && \
