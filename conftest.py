@@ -4,14 +4,14 @@ def pytest_addoption(parser):
     parser.addoption(
         "--app-url",
         action="store",
-        default="http://opencart:80",
-        help="URL вашего Opencart"
+        default="http://localhost:8082",
+        help="Base URL приложения (OpenCart)"
     )
     parser.addoption(
         "--selenoid-url",
         action="store",
         default="http://selenoid:4444/wd/hub",
-        help="URL Selenoid WebDriver"
+        help="URL Selenoid (Remote WebDriver)"
     )
     parser.addoption(
         "--browser",
