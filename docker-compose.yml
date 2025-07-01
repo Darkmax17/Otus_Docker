@@ -1,67 +1,102 @@
-version: '3.9'
-
-networks:
-  selenoid_net:
-    driver: bridge
+version: "3.8"
 
 services:
-  # ------ Selenoid (WebDriver Hub) ------
+  # ----------------------------------------------------------------------------
+  # БД для Opencart
+  mysql-1:
+    image: mysql:5.7
+    container_name: mysql-1
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: opencart
+      MYSQL_USER: root
+      MYSQL_PASSWORD: root
+    ports:
+      - "3306:3306"
+    networks:
+      - doccomp
+
+  # ----------------------------------------------------------------------------
+  # Сам Opencart
+  opencart:
+    image: php:7.4-apache
+    container_name: opencart-1
+    depends_on:
+      - mysql-1
+    volumes:
+      - ./opencart_code:/var/www/html:cached
+    environment:
+      # если позже понадобятся, можно в конфигурации config.php их взять
+      DB_DRIVER: mysqli
+      DB_HOSTNAME: mysql-1
+      DB_USERNAME: root
+      DB_PASSWORD: root
+      DB_DATABASE: opencart
+      DB_PORT: 3306
+    # убрал проброс 80→8080, чтобы не конфликтовать с Jenkins
+    networks:
+      - doccomp
+
+  # ----------------------------------------------------------------------------
+  # Администратор БД в браузере
+  adminer-1:
+    image: adminer:latest
+    container_name: adminer-1
+    restart: always
+    ports:
+      - "8082:8080"
+    networks:
+      - doccomp
+
+  # ----------------------------------------------------------------------------
+  # Selenoid
   selenoid:
     image: aerokube/selenoid:latest-release
     container_name: selenoid
-    command:
-      - "-limit"
-      - "5"
-      - "-timeout"
-      - "3m"
+    restart: always
+    volumes:
+      - ./config/browsers.json:/etc/selenoid/browsers.json:ro
+      - /var/run/docker.sock:/var/run/docker.sock
     ports:
       - "4444:4444"
-    volumes:
-      - "./config:/etc/selenoid"
-      - "/var/run/docker.sock:/var/run/docker.sock"
     networks:
-      - selenoid_net
+      - doccomp
 
-  # ------ Selenoid UI ------
+  # ----------------------------------------------------------------------------
+  # Веб-GUI для Selenoid
   selenoid-ui:
-    image: aerokube/selenoid-ui
+    image: aerokube/selenoid-ui:latest
     container_name: selenoid-ui
+    restart: always
+    depends_on:
+      - selenoid
     ports:
       - "8081:8080"
     networks:
-      - selenoid_net
+      - doccomp
 
-  # ------ Jenkins ------
+  # ----------------------------------------------------------------------------
+  # Jenkins
   jenkins:
     build:
       context: .
       dockerfile: Dockerfile
     image: custom-jenkins:latest
     container_name: jenkins
+    restart: always
+    user: root
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - ./plugins.txt:/usr/share/jenkins/ref/plugins.txt:ro
     ports:
       - "8080:8080"
       - "50000:50000"
-    volumes:
-      - jenkins_home:/var/jenkins_home
-      - /var/run/docker.sock:/var/run/docker.sock
     networks:
-      - selenoid_net
+      - doccomp
 
-  opencart:
-    image: bitnami/opencart:latest
-    container_name: opencart
-    environment:
-      - OPENCART_HOST=localhost
-      - OPENCART_USERNAME=user
-      - OPENCART_PASSWORD=bitnami123
-      - OPENCART_EMAIL=user@example.com
-      - OPENCART_FIRST_NAME=Admin
-      - OPENCART_LAST_NAME=User
-    ports:
-      - "8082:8080"
-    networks:
-      - selenoid_net
-
+networks:
+  doccomp:
 
 volumes:
   jenkins_home:
