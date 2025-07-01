@@ -30,6 +30,11 @@ def pytest_addoption(parser):
 def app_url(request):
     return request.config.getoption("--app-url")
 
+# вернуть «url» для существующих тестов
+@pytest.fixture(scope="session")
+def url(app_url):
+    return app_url
+
 @pytest.fixture(scope="session")
 def selenoid_url(request):
     return request.config.getoption("--selenoid-url")
