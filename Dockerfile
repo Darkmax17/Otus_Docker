@@ -1,25 +1,23 @@
-# Базовый образ Jenkins
+################################################
+# 1. Берём официальный Jenkins LTS
+################################################
 FROM jenkins/jenkins:lts
 
-# Сразу переход на root, чтобы ставить пакеты и плагины
+# Меняем на root, чтобы ставить плагины и OS-пакеты
 USER root
 
-# 1) Копируем список плагинов и ставим их
+# 2. Копируем список плагинов и ставим их через новый cli
 COPY plugins.txt /usr/share/jenkins/ref/plugins.txt
-# старый install-plugins.sh убран, используем новый cli
 RUN jenkins-plugin-cli --plugin-file /usr/share/jenkins/ref/plugins.txt
 
-# 2) Устанавливаем Python 3.11, venv и curl/unzip
-RUN apt-get update && \
-    apt-get install -y python3 python3-pip python3-venv curl unzip && \
+# 3. Устанавливаем Python3 и утилиты (curl, unzip), повторяем попытки при сбоях
+RUN rm -rf /var/lib/apt/lists/* && \
+    apt-get update -o Acquire::Retries=3 && \
+    apt-get install -y --no-install-recommends --fix-missing \
+      python3 python3-pip python3-venv curl unzip && \
     rm -rf /var/lib/apt/lists/*
 
-# 3) Устанавливаем Allure CLI
-RUN curl -L -o /tmp/allure.tgz \
-      https://github.com/allure-framework/allure2/releases/download/2.24.1/allure-2.24.1.tgz && \
-    tar zxvf /tmp/allure.tgz -C /opt && \
-    ln -s /opt/allure-2.24.1/bin/allure /usr/bin/allure && \
-    rm /tmp/allure.tgz
-
-# Возвращаемся под пользователем Jenkins
+# Возвращаемся к Jenkins-пользователю
 USER jenkins
+
+# (далее ваши ENTRYPOINT/CMD, если они были)
