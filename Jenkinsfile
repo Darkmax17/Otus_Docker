@@ -1,61 +1,71 @@
 pipeline {
-  agent any
+    agent any
 
-  parameters {
-    string(name: 'APP_URL', defaultValue: 'http://localhost:8080', description: 'Адрес OpenCart')
-    string(name: 'SELENOID_URL', defaultValue: 'http://localhost:4444/wd/hub', description: 'Адрес Selenoid')
-    string(name: 'BROWSER', defaultValue: 'chrome', description: 'Браузер')
-    string(name: 'BROWSER_VERSION', defaultValue: '119.0', description: 'Версия браузера')
-    string(name: 'THREADS', defaultValue: '2', description: 'Количество потоков')
-  }
-
-  stages {
-    stage('Install Python') {
-      steps {
-        sh '''
-          echo "Текущий пользователь: $(whoami)"
-          echo "Обновляем apt и ставим python3 и pip..."
-          apt-get update || true
-          apt-get install -y python3 python3-venv python3-pip || true
-        '''
-      }
+    parameters {
+        string(name: 'APP_URL',
+               defaultValue: 'http://opencart:80',
+               description: 'Адрес Opencart внутри Docker-сети')
+        string(name: 'SELENOID_URL',
+               defaultValue: 'http://selenoid:4444/wd/hub',
+               description: 'Адрес Selenoid WebDriver')
+        string(name: 'BROWSER',
+               defaultValue: 'chrome',
+               description: 'Имя браузера')
+        string(name: 'BROWSER_VERSION',
+               defaultValue: '119.0',
+               description: 'Версия браузера')
+        string(name: 'THREADS',
+               defaultValue: '2',
+               description: 'Количество параллельных потоков xdist')
     }
 
-    stage('Install requirements') {
-      steps {
-        sh '''
-          echo "Создание виртуального окружения..."
-          python3 -m venv venv
-          . venv/bin/activate
-          echo "Установка зависимостей..."
-          pip install --upgrade pip
-          pip install -r requirements.txt
-        '''
-      }
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Install requirements') {
+            steps {
+                sh """
+                  python3 -m venv venv
+                  . venv/bin/activate
+                  pip install --upgrade pip
+                  pip install -r requirements.txt
+                """
+            }
+        }
+
+        stage('Run tests') {
+            steps {
+                sh """
+                  . venv/bin/activate
+                  pytest tests \
+                    --app-url=${APP_URL} \
+                    --selenoid-url=${SELENOID_URL} \
+                    --browser=${BROWSER} \
+                    --browser-version=${BROWSER_VERSION} \
+                    --alluredir=allure-results \
+                    -n ${THREADS}
+                """
+            }
+        }
+
+        stage('Allure Report') {
+            steps {
+                // если плагин Allure уже настроен через Global Tool Configuration
+                allure includeProperties: false,
+                       results: [[path: 'allure-results']]
+            }
+        }
     }
 
-stage('Run tests') {
-  steps {
-    dir('.') {
-      sh '''
-        echo "✅ Активируем виртуальное окружение и запускаем тесты..."
-        . venv/bin/activate
-        pytest tests \
-          --app-url=$APP_URL \
-          --selenoid-url=$SELENOID_URL \
-          --browser=$BROWSER \
-          --browser-version=$BROWSER_VERSION \
-          --alluredir=allure-results \
-          -n $THREADS
-      '''
+    post {
+        always {
+            // соберём артефакты (логи и отчёт) на всякий случай
+            archiveArtifacts artifacts: 'allure-results/**', allowEmptyArchive: true
+            archiveArtifacts artifacts: 'logs/**/*.log',   allowEmptyArchive: true
+        }
     }
-  }
-}
-
-    stage('Allure Report') {
-      steps {
-        allure includeProperties: false, jdk: '', results: [[path: 'Otus_Docker/tests/allure-results']]
-      }
-    }
-  }
 }
