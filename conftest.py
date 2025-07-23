@@ -1,113 +1,94 @@
 import pytest
 import datetime
-from selenium import webdriver
 import logging
-
-default_url = "http://192.168.100.9:8085"
-default_executor = "192.168.100.9"
-log_level = "DEBUG"
-
+import os
+from selenium import webdriver
 
 def pytest_addoption(parser):
     parser.addoption(
-        "--browser", action="store", default="chrome", help="browser for tests"
-    )
-    parser.addoption("--bv", action="store", help="browser version")
-    parser.addoption(
-        "--headless",
-        action="store",
-        default=None,
-        help="enable/disable headless mode: 'true' or 'false'",
+        "--app-url", action="store", default="http://localhost:8082",
+        help="Base URL приложения OpenCart"
     )
     parser.addoption(
-        "--remote", action="store_true", help="remote launching by default"
+        "--selenoid-url", action="store",
+        default="http://selenoid:4444/wd/hub",
+        help="URL Selenoid (Remote WebDriver endpoint)"
     )
-    parser.addoption("--url", action="store", default=default_url)
-    parser.addoption("--vnc", action="store_true")
-    parser.addoption("--executor", action="store", default=default_executor)
+    parser.addoption(
+        "--browser", action="store", default="chrome",
+        help="Имя браузера (chrome или firefox)"
+    )
+    parser.addoption(
+        "--browser-version", action="store", default="119.0",
+        help="Версия браузера"
+    )
+    parser.addoption(
+        "--vnc", action="store_true", default=False,
+        help="Включить VNC в Selenoid"
+    )
 
+@pytest.fixture(scope="session")
+def app_url(request):
+    return request.config.getoption("--app-url")
 
-def additional_option(options):
+@pytest.fixture(scope="session")
+def selenoid_url(request):
+    return request.config.getoption("--selenoid-url")
+
+@pytest.fixture(scope="session")
+def browser_name(request):
+    return request.config.getoption("--browser")
+
+@pytest.fixture(scope="session")
+def browser_version(request):
+    return request.config.getoption("--browser-version")
+
+@pytest.fixture(scope="session")
+def vnc(request):
+    return request.config.getoption("--vnc")
+
+def _additional_options(options):
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-gpu")
     options.add_argument("--window-size=1920,1080")
 
-
 @pytest.fixture
-def browser(request):
+def browser(request, selenoid_url, browser_name, browser_version, vnc):
+    # подготовка логирования
+    os.makedirs("logs", exist_ok=True)
+    log_path = f"logs/{request.node.name}.log"
     logger = logging.getLogger(request.node.name)
-    file_handler = logging.FileHandler(f"logs/{request.node.name}.log")
-    file_handler.setFormatter(logging.Formatter("%(levelname)s %(message)s"))
-    logger.addHandler(file_handler)
-    logger.setLevel(level=log_level)
-    logger.info("===> Test started at %s" % datetime.datetime.now())
-    logger.info("===> Test name: %s" % request.node.name)
+    fh = logging.FileHandler(log_path)
+    fh.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s"))
+    logger.addHandler(fh)
+    logger.setLevel(logging.INFO)
+    logger.info(">>> Test started: %s", request.node.name)
 
-    remote = request.config.getoption("remote")
-    browser_name = request.config.getoption("browser")
-    headless = request.config.getoption("headless")
-    browser_version = request.config.getoption("bv")
+    # выбираем опции браузера
+    if browser_name.lower() == "chrome":
+        options = webdriver.ChromeOptions()
+    elif browser_name.lower() == "firefox":
+        options = webdriver.FirefoxOptions()
+    else:
+        raise ValueError(f"Unsupported browser: {browser_name}")
+    _additional_options(options)
 
-    logger.info("===> Browser: %s, version: %s" % (browser_name, browser_version))
+    # capabilities для Selenoid
+    options.set_capability("browserVersion", browser_version)
+    options.set_capability(
+        "selenoid:options",
+        {"enableVNC": vnc, "name": request.node.name}
+    )
 
-    vnc = request.config.getoption("vnc")
-    executor = request.config.getoption("executor")
-    executor_url = f"http://{executor}:4444/wd/hub"
+    logger.info("→ Launch remote WebDriver at %s", selenoid_url)
+    driver = webdriver.Remote(command_executor=selenoid_url, options=options)
+    driver.logger = logger
 
-    driver = None
-    options = None
-
-    try:
-        if remote:
-            if browser_name in ["chrome", "ch"]:
-                options = webdriver.ChromeOptions()
-            elif browser_name in ["firefox", "ff"]:
-                options = webdriver.FirefoxOptions()
-            elif browser_name in ["edge", "ed"]:
-                options = webdriver.EdgeOptions()
-
-            if options:
-                options.set_capability("browserVersion", browser_version)
-                options.set_capability("selenoid:options", {"name": request.node.name})
-                if vnc:
-                    options.set_capability("selenoid:options", {"enableVNC": True})
-                driver = webdriver.Remote(command_executor=executor_url, options=options)
-
-        else:
-            if browser_name in ["chrome", "ch"]:
-                options = webdriver.ChromeOptions()
-                additional_option(options)
-                if headless or headless is None:
-                    options.add_argument("--headless=new")
-                driver = webdriver.Chrome(options=options)
-
-            elif browser_name in ["firefox", "ff"]:
-                options = webdriver.FirefoxOptions()
-                additional_option(options)
-                if headless or headless is None:
-                    options.add_argument("--headless")
-                driver = webdriver.Firefox(options=options)
-
-            elif browser_name in ["edge", "ed"]:
-                options = webdriver.EdgeOptions()
-                additional_option(options)
-                if headless or headless is None:
-                    options.add_argument("--headless=new")
-                driver = webdriver.Edge(options=options)
-
-        if driver is None:
-            raise ValueError(f"Unsupported browser: {browser_name}")
-
-        driver.maximize_window()
-        driver.logger = logger  # Добавляем logger к драйверу
-        return driver
-
-    except Exception as e:
-        logger.error(f"Failed to initialize browser: {e}")
-        raise
-
+    yield driver
+    logger.info("<<< Test finished: %s", request.node.name)
+    driver.quit()
 
 @pytest.fixture
-def url(request):
-    return request.config.getoption("--url")
+def url(app_url):
+    return app_url

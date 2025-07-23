@@ -38,4 +38,4 @@ class CatalogPage(BasePage):
     @allure.step("Поменять валюту")
     def catalog_change_currency(self):
         header = HeaderElement(self.browser, self.url)
-        header.header_change_currency_gbp(
+        header.header_change_currency_gbp()

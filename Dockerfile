@@ -1,55 +1,23 @@
-FROM python:3.10-slim
+################################################
+# 1. Берём официальный Jenkins LTS
+################################################
+FROM jenkins/jenkins:lts
 
-# Установка зависимостей
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    bash \
-    wget \
-    gnupg \
-    curl \
-    netcat-traditional\
-    && rm -rf /var/lib/apt/lists/*
+# Меняем на root, чтобы ставить плагины и OS-пакеты
+USER root
 
+# 2. Копируем список плагинов и ставим их через новый cli
+COPY plugins.txt /usr/share/jenkins/ref/plugins.txt
+RUN jenkins-plugin-cli --plugin-file /usr/share/jenkins/ref/plugins.txt
 
-# Устанавливаем Chrome браузер
-RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add - \
-    && echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends \
-    google-chrome-stable \
-    && rm -rf /var/lib/apt/lists/*
+# 3. Устанавливаем Python3 и утилиты (curl, unzip), повторяем попытки при сбоях
+RUN rm -rf /var/lib/apt/lists/* && \
+    apt-get update -o Acquire::Retries=3 && \
+    apt-get install -y --no-install-recommends --fix-missing \
+      python3 python3-pip python3-venv curl unzip && \
+    rm -rf /var/lib/apt/lists/*
 
-# Устанавливаем Edge браузер
-RUN mkdir -p /etc/apt/keyrings && \
-    curl -sSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /etc/apt/keyrings/microsoft.gpg && \
-    echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/edge stable main" > /etc/apt/sources.list.d/microsoft-edge.list && \
-    apt-get update && \
-    apt-get install -y --no-install-recommends \
-    microsoft-edge-stable \
-    && rm -rf /var/lib/apt/lists/*
+# Возвращаемся к Jenkins-пользователю
+USER jenkins
 
-# Устанавливаем Firefox браузер
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    firefox-esr \
-    && rm -rf /var/lib/apt/lists/*
-
-# RUN apt-get update && apt-get install -y --no-install-recommends netcat-traditional
-
-# Рабочая директория
-WORKDIR /app
-
-# Установка Python зависимостей
-COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
-
-
-# Копируем код
-COPY . .
-
-RUN chmod +x wait-for-it.sh
-
-# Запуск тестов
-# ENTRYPOINT ["python", "-m", "pytest"]
-CMD []
+# (далее ваши ENTRYPOINT/CMD, если они были)

@@ -1,0 +1,13 @@
+{
+  "chrome": {
+    "default": "119.0",
+    "versions": {
+      "119.0": {
+        "image": "selenoid/vnc:chrome_119.0",
+        "port": "4444",
+        "path": "/wd/hub",
+        "env": ["TZ=Europe/Moscow"]
+      }
+    }
+  }
+}

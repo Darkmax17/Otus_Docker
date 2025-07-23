@@ -1,0 +1,12 @@
+git
+git-client
+workflow-aggregator
+credentials
+pipeline-stage-view
+pipeline-model-definition
+pipeline-github-lib
+blueocean
+ssh-credentials
+matrix-auth
+job-dsl
+ansicolor
